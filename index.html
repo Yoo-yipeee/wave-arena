@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#000208" />
+<title>WAVE ARENA</title>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<style>
+  :root{
+    --ink:#dceeff;
+    --dim:rgba(220,238,255,.42);
+    --faint:rgba(220,238,255,.16);
+    --accent:#5fd9ff;
+    --accent-deep:#1a7fd4;
+    --bg:#000208;
+    --ui-font: ui-sans-serif, -apple-system, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;background:var(--bg);overflow:hidden}
+  body{
+    font-family:var(--ui-font);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+
+  #stage{position:fixed;inset:0;display:block;width:100%;height:100%}
+
+  /* ---------- shared chrome ---------- */
+  .layer{position:fixed;inset:0;pointer-events:none;z-index:10}
+  .wordmark{
+    position:fixed;top:26px;left:30px;z-index:14;
+    font-size:11px;letter-spacing:.52em;font-weight:500;
+    color:var(--dim);pointer-events:none;
+    transition:opacity .8s ease;
+  }
+  .wordmark b{font-weight:500;color:rgba(220,238,255,.62)}
+
+  /* ---------- landing ---------- */
+  #landing{
+    position:fixed;inset:0;z-index:12;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:0;pointer-events:auto;
+    transition:opacity 1.1s cubic-bezier(.4,0,.2,1), transform 1.4s cubic-bezier(.4,0,.2,1), filter 1.1s ease;
+  }
+  #landing.gone{opacity:0;transform:scale(1.06);filter:blur(6px);pointer-events:none}
+
+  .drop-target{
+    position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    width:min(70vw,320px);height:min(70vw,320px);
+    border-radius:50%;cursor:pointer;
+    transition:transform .7s cubic-bezier(.2,.9,.2,1);
+  }
+  .drop-target::before,.drop-target::after{
+    content:"";position:absolute;inset:0;border-radius:50%;
+    border:1px solid rgba(95,217,255,.14);
+    transition:border-color .6s ease, transform .9s cubic-bezier(.2,.9,.2,1), opacity .6s ease;
+  }
+  .drop-target::after{
+    inset:26px;border-color:rgba(95,217,255,.07);
+    animation:breathe 7s ease-in-out infinite;
+  }
+  @keyframes breathe{
+    0%,100%{transform:scale(1);opacity:.75}
+    50%{transform:scale(1.045);opacity:.3}
+  }
+  .drop-target:hover::before{border-color:rgba(95,217,255,.42)}
+  .drop-target:hover{transform:scale(1.02)}
+  body.dragging .drop-target::before{border-color:rgba(95,217,255,.75);box-shadow:0 0 90px rgba(50,170,255,.28) inset}
+  body.dragging .drop-target{transform:scale(1.06)}
+
+  .drop-title{
+    font-size:clamp(13px,1.5vw,15px);letter-spacing:.46em;font-weight:400;
+    color:rgba(233,247,255,.9);text-indent:.46em;
+    text-shadow:0 0 34px rgba(70,190,255,.4);
+  }
+  .drop-sub{
+    margin-top:16px;font-size:9.5px;letter-spacing:.36em;color:var(--faint);text-indent:.36em;
+  }
+
+  .split{
+    margin-top:44px;display:flex;align-items:center;gap:18px;
+    font-size:9px;letter-spacing:.3em;color:rgba(220,238,255,.12);
+  }
+  .split i{display:block;width:52px;height:1px;background:linear-gradient(90deg,transparent,rgba(220,238,255,.16),transparent)}
+
+  .demo-btn{
+    margin-top:34px;padding:15px 34px;border:1px solid rgba(95,217,255,.2);
+    background:rgba(10,26,44,.22);backdrop-filter:blur(6px);
+    border-radius:2px;cursor:pointer;color:rgba(233,247,255,.82);
+    font-family:inherit;font-size:10px;letter-spacing:.38em;text-indent:.38em;
+    transition:all .5s cubic-bezier(.2,.9,.2,1);
+  }
+  .demo-btn:hover{
+    border-color:rgba(95,217,255,.62);color:#fff;
+    background:rgba(20,70,120,.3);
+    box-shadow:0 0 44px rgba(50,170,255,.22);letter-spacing:.44em;text-indent:.44em;
+  }
+  .landing-foot{
+    position:fixed;bottom:30px;left:0;right:0;text-align:center;
+    font-size:8.5px;letter-spacing:.3em;color:rgba(220,238,255,.1);
+  }
+
+  /* ---------- loading ---------- */
+  #loading{
+    position:fixed;inset:0;z-index:13;display:none;
+    align-items:center;justify-content:center;flex-direction:column;gap:22px;
+    background:rgba(0,2,8,.55);backdrop-filter:blur(3px);
+  }
+  #loading.on{display:flex}
+  #loading .lbl{font-size:9.5px;letter-spacing:.42em;color:var(--dim);text-indent:.42em}
+  .bar{width:150px;height:1px;background:rgba(255,255,255,.07);overflow:hidden;position:relative}
+  .bar i{position:absolute;inset:0;width:40%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:sweep 1.35s ease-in-out infinite}
+  @keyframes sweep{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+
+  /* ---------- performance HUD ---------- */
+  #hud{
+    position:fixed;left:0;right:0;bottom:0;z-index:14;
+    padding:0 clamp(20px,4vw,54px) clamp(20px,3.4vh,34px);
+    opacity:0;transform:translateY(14px);pointer-events:none;
+    transition:opacity .9s ease, transform .9s cubic-bezier(.2,.9,.2,1);
+    background:linear-gradient(to top,rgba(0,2,8,.72),rgba(0,2,8,.28) 45%,transparent);
+    padding-top:80px;
+  }
+  #hud.on{opacity:1;transform:none;pointer-events:auto}
+  #hud.idle{opacity:0;transform:translateY(10px);pointer-events:none}
+
+  .meta{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:14px}
+  .track{min-width:0}
+  .track .name{
+    font-size:12.5px;letter-spacing:.16em;color:rgba(233,247,255,.88);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(46vw,460px);
+  }
+  .track .state{
+    margin-top:7px;font-size:8.5px;letter-spacing:.4em;color:rgba(95,217,255,.55);
+    transition:color .6s ease;
+  }
+  .track .state.hot{color:rgba(140,230,255,.95)}
+
+  .right{display:flex;align-items:center;gap:clamp(12px,2vw,26px)}
+
+  .times{font-size:10px;letter-spacing:.16em;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .times b{font-weight:400;color:rgba(233,247,255,.8)}
+
+  .vol{display:flex;align-items:center;gap:9px}
+  .vol svg{opacity:.42}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:64px;height:14px;background:transparent;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track{height:1px;background:rgba(220,238,255,.2)}
+  input[type=range]::-moz-range-track{height:1px;background:rgba(220,238,255,.2)}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:-3px;
+    box-shadow:0 0 10px rgba(95,217,255,.7);
+  }
+  input[type=range]::-moz-range-thumb{width:7px;height:7px;border:0;border-radius:50%;background:var(--accent)}
+
+  .iconbtn{
+    background:none;border:0;padding:6px;cursor:pointer;color:rgba(220,238,255,.4);
+    transition:color .35s ease,transform .35s ease;line-height:0;
+  }
+  .iconbtn:hover{color:var(--accent);transform:scale(1.08)}
+
+  .transport{display:flex;align-items:center;gap:clamp(14px,2.4vw,26px)}
+
+  .play{
+    width:46px;height:46px;flex:0 0 46px;border-radius:50%;
+    border:1px solid rgba(95,217,255,.3);background:rgba(8,22,38,.4);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);
+    transition:all .45s cubic-bezier(.2,.9,.2,1);backdrop-filter:blur(6px);
+  }
+  .play:hover{border-color:rgba(95,217,255,.85);box-shadow:0 0 34px rgba(50,170,255,.3);background:rgba(16,48,80,.45)}
+  .play svg{width:14px;height:14px;fill:currentColor;transform:translateX(1px)}
+  .play.playing svg{transform:none}
+
+  .scrub{position:relative;flex:1;height:22px;display:flex;align-items:center;cursor:pointer}
+  .scrub .rail{position:absolute;left:0;right:0;height:1px;background:rgba(220,238,255,.13)}
+  .scrub .fill{position:absolute;left:0;height:1px;width:0;background:linear-gradient(90deg,rgba(95,217,255,.5),var(--accent));box-shadow:0 0 12px rgba(95,217,255,.55)}
+  .scrub .head{
+    position:absolute;width:6px;height:6px;border-radius:50%;background:#eaf9ff;left:0;margin-left:-3px;
+    box-shadow:0 0 14px rgba(120,225,255,.9);opacity:0;transition:opacity .3s ease;
+  }
+  .scrub:hover .head{opacity:1}
+  .scrub .peaks{position:absolute;left:0;right:0;bottom:11px;height:16px;width:100%;opacity:.5}
+
+  .newsong{
+    font-family:inherit;font-size:8.5px;letter-spacing:.32em;text-indent:.32em;
+    background:none;border:0;border-bottom:1px solid transparent;padding:4px 0;
+    color:rgba(220,238,255,.3);cursor:pointer;transition:all .4s ease;white-space:nowrap;
+  }
+  .newsong:hover{color:var(--accent);border-color:rgba(95,217,255,.4)}
+
+  /* ---------- drag overlay ---------- */
+  #dragveil{
+    position:fixed;inset:0;z-index:20;opacity:0;pointer-events:none;
+    transition:opacity .4s ease;
+    background:radial-gradient(ellipse at center,rgba(12,60,110,.34),rgba(0,2,8,.86));
+    display:flex;align-items:center;justify-content:center;
+  }
+  body.dragging #dragveil{opacity:1}
+  #dragveil span{font-size:11px;letter-spacing:.5em;text-indent:.5em;color:rgba(233,247,255,.85)}
+
+  #toast{
+    position:fixed;left:50%;bottom:16%;transform:translateX(-50%) translateY(10px);
+    z-index:25;opacity:0;transition:all .5s ease;pointer-events:none;
+    font-size:9.5px;letter-spacing:.28em;color:#ffd9d9;
+    border:1px solid rgba(255,140,140,.28);padding:12px 22px;background:rgba(30,6,10,.6);
+    backdrop-filter:blur(6px);text-align:center;max-width:80vw;
+  }
+  #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:720px){
+    .wordmark{top:20px;left:20px;font-size:9.5px}
+    .meta{flex-direction:column;align-items:flex-start;gap:10px}
+    .right{width:100%;justify-content:space-between}
+    .track .name{max-width:80vw}
+    .vol{display:none}
+    .play{width:40px;height:40px;flex-basis:40px}
+    .newsong{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .drop-target::after{animation:none}
+  }
+</style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <div class="wordmark">WAVE&nbsp;<b>ARENA</b></div>
+
+  <!-- LANDING ------------------------------------------------------------ -->
+  <section id="landing">
+    <div class="drop-target" id="dropTarget" role="button" tabindex="0" aria-label="Drop a song">
+      <div class="drop-title">DROP A SONG</div>
+      <div class="drop-sub">MP3 &nbsp;/&nbsp; WAV &nbsp;/&nbsp; M4A</div>
+    </div>
+
+    <div class="split"><i></i>OR<i></i></div>
+    <button class="demo-btn" id="demoBtn">ENTER DEMO</button>
+
+    <div class="landing-foot">AUDIO IS ANALYSED LOCALLY IN YOUR BROWSER &middot; NOTHING IS UPLOADED</div>
+  </section>
+
+  <!-- LOADING ------------------------------------------------------------ -->
+  <div id="loading">
+    <div class="bar"><i></i></div>
+    <div class="lbl" id="loadingLabel">PREPARING PERFORMANCE</div>
+  </div>
+
+  <!-- HUD ---------------------------------------------------------------- -->
+  <footer id="hud">
+    <div class="meta">
+      <div class="track">
+        <div class="name" id="trackName">&mdash;</div>
+        <div class="state" id="stateLabel">STANDBY</div>
+      </div>
+      <div class="right">
+        <div class="times"><b id="tCur">0:00</b> <span style="opacity:.35">/</span> <span id="tDur">0:00</span></div>
+        <div class="vol">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 8.5a5 5 0 0 1 0 7"/>
+          </svg>
+          <input type="range" id="vol" min="0" max="1" step="0.01" value="0.85" aria-label="Volume" />
+        </div>
+        <button class="iconbtn" id="fsBtn" title="Fullscreen" aria-label="Fullscreen">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
+          </svg>
+        </button>
+        <button class="newsong" id="newSong">NEW SONG</button>
+      </div>
+    </div>
+
+    <div class="transport">
+      <button class="play" id="playBtn" aria-label="Play">
+        <svg id="playIcon" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg>
+      </button>
+      <div class="scrub" id="scrub" role="slider" aria-label="Seek" tabindex="0">
+        <canvas class="peaks" id="peaks"></canvas>
+        <div class="rail"></div>
+        <div class="fill" id="scrubFill"></div>
+        <div class="head" id="scrubHead"></div>
+      </div>
+    </div>
+  </footer>
+
+  <div id="dragveil"><span>RELEASE TO BEGIN</span></div>
+  <div id="toast"></div>
+  <input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac" hidden />
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
