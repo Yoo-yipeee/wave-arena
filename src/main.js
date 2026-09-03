@@ -39,6 +39,7 @@ const idleMusic = {
   energy: 0, energyShort: 0, energyLong: 0, rise: 0, flux: 0,
   bpm: 0, beatPhase: 0, beatConfidence: 0, beatDensity: 0,
   spectrum: new Float32Array(128),
+  harmony: null,
   time: 0, progress: 0, playing: false, silence: 1, onset: null,
 };
 
@@ -57,7 +58,7 @@ async function beginTrack(loader, label) {
     return;
   }
 
-  if (!analyser) analyser = new MusicAnalyser(engine.analyser, engine.ctx.sampleRate);
+  if (!analyser) analyser = new MusicAnalyser(engine.analyser, engine.ctx.sampleRate, engine.harmonyAnalyser);
 
   // Read the whole track before a single frame is drawn: level envelope for the
   // scrubber, loudness reference for the analyser, structure for the plan.

@@ -20,8 +20,10 @@ uniform float uRingRadius, uRingWidth;
 uniform float uEruption, uShock, uAwake;
 uniform float uHeightRef;   // expected crest height now — colour is relative to it
 uniform float uRadius;
-uniform float uForm[6];
+uniform float uForm[7];
 uniform sampler2D uSpectrum;
+uniform sampler2D uChroma;      // 12 pitch classes, wrapped
+uniform float uTonic, uMode, uConsonance, uHarmChange;
 uniform vec4 uImpulseA[MAX_IMPULSES];   // xz origin, birth time, strength
 uniform vec4 uImpulseB[MAX_IMPULSES];   // speed, width, kind, -
 
@@ -54,6 +56,8 @@ float fbm(vec2 p) {
 
 // --- spectrum --------------------------------------------------------------
 float spec(float t) { return texture2D(uSpectrum, vec2(clamp(t, 0.0, 1.0), 0.5)).r; }
+// wraps, so pitch class 11 sits next to 0 the way it does on the circle
+float chromaAt(float t) { return texture2D(uChroma, vec2(t, 0.5)).r; }
 float specSmooth(float t) {
   float d = 0.013;
   return spec(t - d) * 0.25 + spec(t) * 0.5 + spec(t + d) * 0.25;
@@ -117,7 +121,7 @@ float waveHeight(vec2 p) {
 `;
 
 /** Uniform block shared by every material that samples the field. */
-export function createFieldUniforms(THREE, spectrumTexture, radius) {
+export function createFieldUniforms(THREE, spectrumTexture, chromaTexture, radius) {
   return {
     uTime: { value: 0 },
     uAmp: { value: 0 }, uBass: { value: 0 }, uMids: { value: 0 }, uHighs: { value: 0 }, uAir: { value: 0 },
@@ -128,8 +132,11 @@ export function createFieldUniforms(THREE, spectrumTexture, radius) {
     uEruption: { value: 0 }, uShock: { value: 0 }, uAwake: { value: 0.25 },
     uHeightRef: { value: 1.0 },
     uRadius: { value: radius },
-    uForm: { value: new Float32Array(6) },
+    uForm: { value: new Float32Array(7) },
     uSpectrum: { value: spectrumTexture },
+    uChroma: { value: chromaTexture },
+    uTonic: { value: 0 }, uMode: { value: 0 },
+    uConsonance: { value: 0 }, uHarmChange: { value: 0 },
     uImpulseA: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
     uImpulseB: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
   };

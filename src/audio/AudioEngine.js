@@ -32,14 +32,27 @@ export class AudioEngine {
     this.gain = this.ctx.createGain();
     this.gain.gain.value = this._volume;
 
+    // Short window: sharp in time, blunt in frequency. For transients, onsets
+    // and band energies.
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 2048;
     this.analyser.smoothingTimeConstant = 0.55;
     this.analyser.minDecibels = -92;
     this.analyser.maxDecibels = -12;
 
+    // Long window: blunt in time, sharp in frequency. For pitch and harmony.
+    // These requirements are opposites — at fftSize 2048 a semitone in the bass
+    // is narrower than one bin, so chords are unreadable there. Two nodes off
+    // the same tap costs one extra FFT and makes both jobs possible.
+    this.harmonyAnalyser = this.ctx.createAnalyser();
+    this.harmonyAnalyser.fftSize = 8192;
+    this.harmonyAnalyser.smoothingTimeConstant = 0.72;
+    this.harmonyAnalyser.minDecibels = -95;
+    this.harmonyAnalyser.maxDecibels = -18;
+
     // Tap post-gain so the visual follows what is actually heard.
     this.gain.connect(this.analyser);
+    this.gain.connect(this.harmonyAnalyser);
     this.gain.connect(this.ctx.destination);
     return this.ctx;
   }

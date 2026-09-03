@@ -5,6 +5,7 @@ import {
   POINTS_VERT, POINTS_FRAG, BACKDROP_VERT, BACKDROP_FRAG,
 } from './shaders/materials.js';
 import { SPECTRUM_BINS } from '../analysis/MusicAnalyser.js';
+import { FORM_COUNT } from '../performance/Primitives.js';
 
 const PALETTE = {
   deep: new THREE.Color(0x01060d),
@@ -13,6 +14,21 @@ const PALETTE = {
   backTop: new THREE.Color(0x000106),
   backBottom: new THREE.Color(0x01050b),
   glow: new THREE.Color(0x06243f),
+};
+
+/**
+ * The song's water colour, as a blue-family bilinear blend over
+ * (mode: minor..major) x (brightness: dark..bright).
+ *
+ * Deliberately one hue family: every track should still read as WAVE ARENA.
+ * Songs separate themselves through shape, motion and material — harmony only
+ * shifts the tone within the family.
+ */
+const TONE = {
+  minorDark:   new THREE.Color(0x0a3a68),   // deep indigo
+  minorBright: new THREE.Color(0x1273c4),   // steel blue
+  majorDark:   new THREE.Color(0x1a86c8),   // muted aqua
+  majorBright: new THREE.Color(0x37c8e8),   // aqua
 };
 
 /**
@@ -38,7 +54,18 @@ export class WaterArena {
     this.spectrumTex.wrapS = THREE.ClampToEdgeWrapping;
     this.spectrumTex.needsUpdate = true;
 
-    this.U = createFieldUniforms(THREE, this.spectrumTex, this.radius);
+    // 12 pitch classes, wrapped so pc 11 is adjacent to pc 0 on the circle
+    this.chromaData = new Uint8Array(12);
+    this.chromaTex = new THREE.DataTexture(this.chromaData, 12, 1, THREE.RedFormat);
+    this.chromaTex.minFilter = THREE.LinearFilter;
+    this.chromaTex.magFilter = THREE.LinearFilter;
+    this.chromaTex.wrapS = THREE.RepeatWrapping;
+    this.chromaTex.needsUpdate = true;
+
+    this.U = createFieldUniforms(THREE, this.spectrumTex, this.chromaTex, this.radius);
+    this._tone = PALETTE.mid.clone();
+    this._toneTarget = PALETTE.mid.clone();
+    this._toneScratch = PALETTE.mid.clone();
 
     // ---- shared polar geometry ---------------------------------------------
     const { positionAttr, triIndex, lineIndex } = buildPolarDisc(rings, segments, this.radius, lineStep);
@@ -201,7 +228,39 @@ export class WaterArena {
     const href = Math.max(0.7, perf.height * 2.3);
     U.uHeightRef.value += (href - U.uHeightRef.value) * (1 - Math.exp(-dtSmooth * 1.4));
 
-    for (let i = 0; i < 6; i++) U.uForm.value[i] = perf.forms[i];
+    for (let i = 0; i < FORM_COUNT; i++) U.uForm.value[i] = perf.forms[i];
+
+    // ---- harmony -----------------------------------------------------------
+    const h = music.harmony;
+    if (h) {
+      const c = h.chroma;
+      for (let i = 0; i < 12; i++) {
+        this.chromaData[i] = Math.max(0, Math.min(255, c[i] * 255)) | 0;
+      }
+      this.chromaTex.needsUpdate = true;
+
+      // Assigned, not interpolated: the tonic is circular, so easing from 11.9
+      // to 0.1 would sweep the long way round and visibly spin the arena. It is
+      // already smoothed around the circle inside HarmonyAnalyser.
+      U.uTonic.value = h.tonic;
+      U.uMode.value += (h.mode - U.uMode.value) * (1 - Math.exp(-dt * 0.8));
+      U.uConsonance.value += (h.consonance - U.uConsonance.value) * (1 - Math.exp(-dt * 1.5));
+      U.uHarmChange.value = h.change;
+
+      // tone: bilinear over (mode, brightness), inside the blue family
+      const maj = h.mode * 0.5 + 0.5;
+      const bright = Math.min(1, music.highs * 0.55 + music.mids * 0.3 + h.tonalness * 0.3);
+      this._toneScratch.copy(TONE.majorDark).lerp(TONE.majorBright, bright);
+      this._toneTarget
+        .copy(TONE.minorDark).lerp(TONE.minorBright, bright)
+        .lerp(this._toneScratch, maj);
+      this._tone.lerp(this._toneTarget, 1 - Math.exp(-dt * 0.5));
+
+      this.bodyMat.uniforms.uMid.value.copy(this._tone);
+      this.bodyReflMat.uniforms.uMid.value.copy(this._tone);
+      this.lineMat.uniforms.uMid.value.copy(this._tone);
+      this.lineReflMat.uniforms.uMid.value.copy(this._tone);
+    }
 
     // spectrum -> texture
     const sp = music.spectrum;
@@ -248,6 +307,7 @@ export class WaterArena {
     [this.bodyMat, this.bodyReflMat, this.lineMat, this.lineReflMat, this.mistMat, this.backdropMat]
       .forEach(m => m.dispose());
     this.spectrumTex.dispose();
+    this.chromaTex.dispose();
   }
 }
 

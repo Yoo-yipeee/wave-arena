@@ -24,42 +24,42 @@ const LOOKS = {
   silence: {
     height: 0.7, spectrumGain: 0.10, complexity: 0.10, chaos: 0.02, flow: 0.28, symmetry: 2,
     mist: 0.20, spray: 0.0, bloom: 0.55, heat: 0.0, camDist: 40, camHeight: 13.0, fov: 34,
-    forms: { radial: 0.10, rings: 0.55, towers: 0.0, walls: 0.10, arches: 0.0, columns: 0.0 },
+    forms: { harmonic: 0.25, radial: 0.06, rings: 0.55, towers: 0.0, walls: 0.10, arches: 0.0, columns: 0.0 },
   },
   intro: {
     height: 1.1, spectrumGain: 0.30, complexity: 0.24, chaos: 0.05, flow: 0.45, symmetry: 2,
     mist: 0.32, spray: 0.03, bloom: 0.7, heat: 0.05, camDist: 38, camHeight: 12.0, fov: 35,
-    forms: { radial: 0.30, rings: 0.60, towers: 0.05, walls: 0.18, arches: 0.05, columns: 0.0 },
+    forms: { harmonic: 0.60, radial: 0.16, rings: 0.60, towers: 0.05, walls: 0.18, arches: 0.05, columns: 0.0 },
   },
   verse: {
     height: 2.2, spectrumGain: 0.62, complexity: 0.45, chaos: 0.10, flow: 0.7, symmetry: 2,
     mist: 0.40, spray: 0.12, bloom: 0.85, heat: 0.18, camDist: 34, camHeight: 11.0, fov: 37,
-    forms: { radial: 0.55, rings: 0.50, towers: 0.18, walls: 0.30, arches: 0.10, columns: 0.10 },
+    forms: { harmonic: 0.85, radial: 0.28, rings: 0.50, towers: 0.18, walls: 0.30, arches: 0.10, columns: 0.10 },
   },
   build: {
     height: 1.9, spectrumGain: 0.85, complexity: 0.75, chaos: 0.26, flow: 1.05, symmetry: 3,
     mist: 0.60, spray: 0.30, bloom: 1.0, heat: 0.45, camDist: 38, camHeight: 14.5, fov: 39,
-    forms: { radial: 0.75, rings: 0.40, towers: 0.55, walls: 0.28, arches: 0.20, columns: 0.35 },
+    forms: { harmonic: 0.80, radial: 0.38, rings: 0.40, towers: 0.55, walls: 0.28, arches: 0.20, columns: 0.35 },
   },
   drop: {
     height: 2.3, spectrumGain: 1.15, complexity: 0.95, chaos: 0.42, flow: 1.35, symmetry: 4,
     mist: 0.85, spray: 1.0, bloom: 1.35, heat: 1.0, camDist: 43, camHeight: 21.0, fov: 46,
-    forms: { radial: 1.0, rings: 0.75, towers: 0.9, walls: 0.5, arches: 0.45, columns: 0.6 },
+    forms: { harmonic: 1.00, radial: 0.50, rings: 0.75, towers: 0.9, walls: 0.5, arches: 0.45, columns: 0.6 },
   },
   chorus: {
     height: 2.0, spectrumGain: 1.0, complexity: 0.8, chaos: 0.24, flow: 1.15, symmetry: 4,
     mist: 0.70, spray: 0.6, bloom: 1.15, heat: 0.72, camDist: 41, camHeight: 18.0, fov: 41,
-    forms: { radial: 0.9, rings: 0.6, towers: 0.65, walls: 0.4, arches: 0.6, columns: 0.75 },
+    forms: { harmonic: 1.00, radial: 0.45, rings: 0.6, towers: 0.65, walls: 0.4, arches: 0.6, columns: 0.75 },
   },
   break: {
     height: 0.9, spectrumGain: 0.28, complexity: 0.2, chaos: 0.04, flow: 0.4, symmetry: 2,
     mist: 0.34, spray: 0.05, bloom: 0.7, heat: 0.08, camDist: 39, camHeight: 12.0, fov: 34,
-    forms: { radial: 0.25, rings: 0.6, towers: 0.02, walls: 0.14, arches: 0.05, columns: 0.0 },
+    forms: { harmonic: 0.55, radial: 0.12, rings: 0.6, towers: 0.02, walls: 0.14, arches: 0.05, columns: 0.0 },
   },
   outro: {
     height: 1.0, spectrumGain: 0.3, complexity: 0.22, chaos: 0.04, flow: 0.42, symmetry: 2,
     mist: 0.35, spray: 0.05, bloom: 0.72, heat: 0.06, camDist: 41, camHeight: 13.0, fov: 33,
-    forms: { radial: 0.28, rings: 0.55, towers: 0.02, walls: 0.12, arches: 0.10, columns: 0.0 },
+    forms: { harmonic: 0.50, radial: 0.14, rings: 0.55, towers: 0.02, walls: 0.12, arches: 0.10, columns: 0.0 },
   },
 };
 
@@ -68,10 +68,10 @@ const LOOKS = {
  * reads as choreography rather than noise. Each entry is a multiplier set.
  */
 const PHRASE_VARIANTS = [
-  { radial: 1.0, rings: 1.0, towers: 1.0, walls: 1.0, arches: 1.0, columns: 1.0 },
-  { radial: 0.8, rings: 1.2, towers: 0.5, walls: 1.5, arches: 0.6, columns: 1.3 },
-  { radial: 1.15, rings: 0.7, towers: 1.4, walls: 0.5, arches: 1.4, columns: 0.7 },
-  { radial: 0.9, rings: 1.1, towers: 0.9, walls: 1.2, arches: 0.8, columns: 1.4 },
+  { harmonic: 1.0, radial: 1.0, rings: 1.0, towers: 1.0, walls: 1.0, arches: 1.0, columns: 1.0 },
+  { harmonic: 1.0, radial: 0.8, rings: 1.2, towers: 0.5, walls: 1.5, arches: 0.6, columns: 1.3 },
+  { harmonic: 1.1, radial: 1.15, rings: 0.7, towers: 1.4, walls: 0.5, arches: 1.4, columns: 0.7 },
+  { harmonic: 0.95, radial: 0.9, rings: 1.1, towers: 0.9, walls: 1.2, arches: 0.8, columns: 1.4 },
 ];
 
 /** Crest height ceiling, world units — the arena is 26 units across. */
@@ -360,6 +360,14 @@ export class Choreographer {
       }
     }
 
+    // A chord change is one of the most felt moments in music and used to
+    // produce no visual response at all. It is a reshaping, not an impact:
+    // a broad slow swell rather than a percussive ring.
+    if (m.harmony && m.harmony.changed && m.harmony.tonalness > 0.3) {
+      this.emit(0, 0, 0.5 + m.harmony.change * 0.7, 4.5, 9.0, 1);
+      this.events.push({ type: 'harmony', strength: m.harmony.change });
+    }
+
     // A surge is any large, sudden arrival of energy — the moment a chorus
     // lands, a section changes, a beat re-enters. Deliberately independent of
     // the section machine: whether or not we labelled it a drop, the arena
@@ -436,7 +444,10 @@ export class Choreographer {
     p.height += (wantHeight - p.height) * k;
     p.spectrumGain += (look.spectrumGain * (0.65 + m.amplitude * 0.7) - p.spectrumGain) * k;
     p.complexity += (look.complexity * (1 + buildRamp * 0.5) + m.highs * 0.25 - p.complexity) * k;
-    p.chaos += (look.chaos * (1 + buildRamp) + m.highs * 0.12 - p.chaos) * k;
+    // Dissonance is felt as turbulence: a harsh sonority roughens the surface
+    // even at the same loudness as a sweet one.
+    const harshness = m.harmony ? Math.max(0, -m.harmony.consonance) * m.harmony.tonalness : 0;
+    p.chaos += (look.chaos * (1 + buildRamp) + m.highs * 0.12 + harshness * 0.16 - p.chaos) * k;
     p.flow += (look.flow * (0.8 + m.energyShort * 0.55) - p.flow) * k;
     p.symmetry += (look.symmetry - p.symmetry) * (1 - Math.exp(-sdt * 0.8));
     p.mist += (look.mist * (0.7 + m.amplitude * 0.6) - p.mist) * (1 - Math.exp(-sdt * 1.1));
@@ -457,12 +468,17 @@ export class Choreographer {
     p.ringWidth += (targetW - p.ringWidth) * (1 - Math.exp(-sdt * 0.9));
 
     // ---- form weights -------------------------------------------------------
+    const harm = m.harmony;
+    const tonalness = harm ? harm.tonalness : 0;
     const variant = PHRASE_VARIANTS[this.phrase % PHRASE_VARIANTS.length];
     const fk = 1 - Math.exp(-sdt * (this.section === 'drop' ? 4.0 : 1.1));
     for (const name in FORM_INDEX) {
       const idx = FORM_INDEX[name];
       let target = (look.forms[name] || 0) * (variant[name] || 1);
       // Live nudges so forms answer the mix, not just the section label.
+      // Harmony leads while the music is pitched, and steps aside for passages
+      // that are pure percussion or noise, where chroma means nothing.
+      if (name === 'harmonic') target *= 0.35 + tonalness * 1.05;
       if (name === 'towers') target *= 0.6 + m.bass * 0.9;
       if (name === 'columns') target *= 0.6 + m.mids * 0.9;
       if (name === 'arches') target *= 0.6 + m.highs * 0.8;

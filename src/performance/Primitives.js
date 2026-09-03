@@ -16,14 +16,53 @@
  *       world units) so the two cannot compound into an unpredictable range.
  */
 
-export const FORM_NAMES = ['radial', 'rings', 'towers', 'walls', 'arches', 'columns'];
+export const FORM_NAMES = ['harmonic', 'radial', 'rings', 'towers', 'walls', 'arches', 'columns'];
 export const FORM_INDEX = FORM_NAMES.reduce((o, n, i) => (o[n] = i, o), {});
 export const FORM_COUNT = FORM_NAMES.length;
 
 export const FORMS_GLSL = /* glsl */`
 // ---------------------------------------------------------------------------
-// radial — the song's spectrum wrapped around the arena. This is the signature
-// form: the silhouette of the water literally is the shape of the sound.
+// harmonic — the chord itself, laid out around the arena.
+//
+// Each of the twelve pitch classes owns a bearing, and its lobe rises with how
+// strongly that note is sounding. A triad is three peaks; a chord change moves
+// which peaks stand. The layout is rotated by the detected tonic so the root
+// keeps a fixed bearing — otherwise every chord change would spin the arena
+// instead of reshaping it.
+//
+// Mode bends the geometry rather than just the colour: minor narrows and
+// sharpens the lobes, major opens and rounds them.
+// ---------------------------------------------------------------------------
+float form_harmonic(vec2 p, float r, float ang) {
+  float pc   = fract((ang * INV_TAU + 0.5) - uTonic / 12.0);
+  float slot = pc * 12.0;
+  float f    = fract(slot);
+  float id   = floor(slot);
+
+  // sample at the slot centre so neighbouring pitch classes cannot smear
+  float amp = chromaAt((id + 0.5) / 12.0);
+
+  float maj    = uMode * 0.5 + 0.5;                  // 0 minor .. 1 major
+  float sharp  = mix(3.8, 1.15, maj);
+  float lobe   = pow(max(0.0, 1.0 - abs(f * 2.0 - 1.0)), sharp);
+
+  // a little per-note variation so twelve identical lobes never read as a dial
+  float vary = 0.82 + 0.36 * hash11(id * 2.17);
+  float rad  = uRingRadius * (0.88 + 0.24 * hash11(id * 5.31));
+  float env  = exp(-pow((r - rad) / (uRingWidth * mix(0.72, 1.28, maj)), 2.0));
+
+  // dissonance roughens the crest; consonance leaves it glassy
+  float rough = 1.0 + (1.0 - uConsonance) * 0.26 * sin(r * 5.2 + id * 11.0 - uTime * 3.1);
+
+  // a harmonic change travels outward through the structure
+  float wave = 1.0 + uHarmChange * 0.85 * sin(r * 0.85 - uTime * 5.0);
+
+  return amp * lobe * env * vary * rough * wave * 1.5;
+}
+
+// ---------------------------------------------------------------------------
+// radial — the song's spectrum wrapped around the arena. Fine detail and
+// shimmer layered over the harmonic structure.
 // ---------------------------------------------------------------------------
 float form_radial(vec2 p, float r, float ang) {
   float au  = ang * INV_TAU + 0.5;
@@ -106,12 +145,13 @@ float form_columns(vec2 p, float r, float ang) {
 // ---------------------------------------------------------------------------
 float formSum(vec2 p, float r, float ang) {
   float h = 0.0;
-  if (uForm[0] > 0.001) h += uForm[0] * form_radial (p, r, ang);
-  if (uForm[1] > 0.001) h += uForm[1] * form_rings  (p, r, ang);
-  if (uForm[2] > 0.001) h += uForm[2] * form_towers (p, r, ang);
-  if (uForm[3] > 0.001) h += uForm[3] * form_walls  (p, r, ang);
-  if (uForm[4] > 0.001) h += uForm[4] * form_arches (p, r, ang);
-  if (uForm[5] > 0.001) h += uForm[5] * form_columns(p, r, ang);
+  if (uForm[0] > 0.001) h += uForm[0] * form_harmonic(p, r, ang);
+  if (uForm[1] > 0.001) h += uForm[1] * form_radial  (p, r, ang);
+  if (uForm[2] > 0.001) h += uForm[2] * form_rings   (p, r, ang);
+  if (uForm[3] > 0.001) h += uForm[3] * form_towers  (p, r, ang);
+  if (uForm[4] > 0.001) h += uForm[4] * form_walls   (p, r, ang);
+  if (uForm[5] > 0.001) h += uForm[5] * form_arches  (p, r, ang);
+  if (uForm[6] > 0.001) h += uForm[6] * form_columns (p, r, ang);
   return h;
 }
 `;
