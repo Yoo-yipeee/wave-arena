@@ -92,26 +92,47 @@ export class Stage {
     this.composer.addPass(this.grade);
 
     this.fade = 0;         // 0 = black, 1 = fully visible
+    this.ready = false;
     this.resize();
     window.addEventListener('resize', () => this.resize(), { passive: true });
+
+    // A window resize event never fires for a container that is simply laid out
+    // late, so watch the canvas itself and pick up its real size when it lands.
+    if (typeof ResizeObserver !== 'undefined') {
+      this._ro = new ResizeObserver(() => this.resize());
+      this._ro.observe(canvas);
+    }
   }
 
   get pixelRatio() { return Math.min(window.devicePixelRatio || 1, this.quality.maxDpr); }
 
   resize() {
-    const w = window.innerWidth, h = window.innerHeight;
+    // Never let a dimension reach zero. The constructor sizes the stage
+    // immediately, and in a hidden iframe or a container that has not been laid
+    // out yet the viewport reads 0 — which builds zero-sized render targets and
+    // makes every draw fail with an incomplete framebuffer until some later
+    // resize happens to rescue it.
+    const w = Math.max(1, window.innerWidth | 0);
+    const h = Math.max(1, window.innerHeight | 0);
+    this.ready = w > 1 && h > 1;
+
     const pr = this.pixelRatio;
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
     this.composer.setPixelRatio(pr);
     this.composer.setSize(w, h);
-    this.bloom.setSize(w * this.quality.bloomRes, h * this.quality.bloomRes);
+    this.bloom.setSize(
+      Math.max(1, Math.round(w * this.quality.bloomRes)),
+      Math.max(1, Math.round(h * this.quality.bloomRes)),
+    );
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (this.onResize) this.onResize(pr);
   }
 
   render(dt, perf) {
+    // Nothing to draw into yet; drawing anyway just logs GL errors every frame.
+    if (!this.ready) return;
     this.grade.uniforms.uTime.value += dt;
     this.grade.uniforms.uFade.value = this.fade;
     this.bloom.strength = 0.26 + perf.bloom * 0.26 + perf.eruption * 0.34;
