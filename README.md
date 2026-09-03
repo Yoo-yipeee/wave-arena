@@ -3,6 +3,13 @@
 Turn music into a visual performance. Upload a song, press play, watch a body of
 water perform it.
 
+### ▶ [Play it live](https://yoo-yipeee.github.io/wave-arena/)
+
+Press **ENTER DEMO** for a built-in track, or drop in an mp3 of your own.
+Nothing is uploaded — the file is decoded and analysed entirely in your browser.
+
+Or run it locally:
+
 ```bash
 node server.js
 ```
